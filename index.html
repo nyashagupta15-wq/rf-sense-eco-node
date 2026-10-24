@@ -18,6 +18,8 @@
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         th { background-color: #f2f2f2; }
     </style>
+    <!-- Load Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -59,35 +61,39 @@
 
     <script>
     (function () {
-        let D = null;
+        // Initialize Supabase Client with your credentials
+        const SUPABASE_URL = 'https://yppxiwatsykiwomgahvw.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_r2_cbPbW3z8qzSvG3PCrpQ_7M8BqJXW';
+        
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         async function loadDashboardData() {
             try {
-                const response = await fetch('/api/data');
-                if (!response.ok) throw new Error('Failed to fetch data from database');
-                D = await response.json();
-                initDashboard();
-                document.querySelector('.sub').textContent = 'Connected successfully to backend database.';
+                // Fetch data from 'readings' table ordered by newest first
+                const { data, error } = await db.from('readings').select('*').order('id', { ascending: false });
+                
+                if (error) throw error;
+
+                initDashboard(data);
+                document.querySelector('.sub').textContent = 'Connected successfully to Supabase cloud database.';
             } catch (err) {
                 console.error('Database connection error:', err);
-                document.querySelector('.sub').textContent = 'Error connecting to database. Ensure server.js is running.';
+                document.querySelector('.sub').textContent = 'Error connecting to database: ' + err.message;
             }
         }
 
         loadDashboardData();
 
-        function initDashboard() {
-            if (!D || !D.readings) return;
-            
+        function initDashboard(readings) {
             const tbody = document.getElementById('dataTableBody');
             tbody.innerHTML = ''; // Clear existing rows
 
-            if (D.readings.length === 0) {
+            if (!readings || readings.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5">No records found in database yet. Add one above!</td></tr>';
                 return;
             }
 
-            D.readings.forEach(row => {
+            readings.forEach(row => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${row.id}</td>
@@ -111,20 +117,15 @@
             };
 
             try {
-                const res = await fetch('/api/readings', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                // Insert record into Supabase
+                const { error } = await db.from('readings').insert([payload]);
                 
-                if (res.ok) {
-                    document.getElementById('addMsg').textContent = 'Reading successfully saved to database!';
-                    document.getElementById('addMsg').className = 'msg ok';
-                    document.getElementById('addForm').reset();
-                    loadDashboardData(); 
-                } else {
-                    throw new Error('Server rejected submission');
-                }
+                if (error) throw error;
+
+                document.getElementById('addMsg').textContent = 'Reading successfully saved to database!';
+                document.getElementById('addMsg').className = 'msg ok';
+                document.getElementById('addForm').reset();
+                loadDashboardData(); 
             } catch (ex) {
                 document.getElementById('addMsg').textContent = 'Error saving reading: ' + ex.message;
                 document.getElementById('addMsg').className = 'msg err';
