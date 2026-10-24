@@ -1,139 +1,424 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Eco-Tower Dashboard</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 40px; background: #f4f7f6; color: #333; }
-        h1 { color: #2c3e50; }
-        .sub { color: #7f8c8d; margin-bottom: 20px; }
-        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        form input { padding: 8px; margin-right: 10px; margin-bottom: 10px; }
-        button { padding: 8px 15px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background: #2980b9; }
-        .msg { font-weight: bold; margin-top: 10px; }
-        .msg.ok { color: green; }
-        .msg.err { color: red; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-    </style>
-    <!-- Load Supabase JS Client -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RF-Sense Eco-Node Dashboard</title>
+
+<!-- Modern Google Fonts & Lucide Icons -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<!-- Supabase JS Client SDK v2 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+/* ==========================================================================
+   CSS VARIABLES & MODERN THEMING SYSTEM
+   ========================================================================== */
+:root {
+  color-scheme: dark;
+  --bg-page: #0f172a;
+  --bg-card: rgba(30, 41, 59, 0.7);
+  --bg-card-hover: rgba(30, 41, 59, 0.9);
+  --bg-surface: #1e293b;
+  --bg-input: #0f172a;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-active: rgba(56, 189, 248, 0.3);
+  --cyan: #38bdf8;
+  --cyan-glow: rgba(56, 189, 248, 0.25);
+  --orange: #fb923c;
+  --emerald: #34d399;
+  --amber: #fbbf24;
+  --rose: #f43f5e;
+  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #090d16;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(58, 130, 247, 0.12) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(251, 146, 60, 0.08) 0px, transparent 50%);
+  background-attachment: fixed;
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 24px;
+  min-height: 100vh;
+}
+
+.wrap { max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+.top { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px; }
+.brand-title-wrap { display: flex; align-items: center; gap: 12px; }
+.brand-icon {
+  width: 42px; height: 42px; border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(251, 146, 60, 0.2));
+  border: var(--glass-border);
+  display: flex; align-items: center; justify-content: center; color: var(--cyan);
+}
+h1 { font-size: 24px; font-weight: 800; color: #fff; }
+.sub { color: var(--text-muted); font-size: 13px; }
+
+.status-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--bg-card); border: var(--glass-border);
+  padding: 6px 14px; border-radius: 99px; font-size: 12px; font-family: var(--font-mono); color: var(--emerald);
+}
+.dot-online { width: 8px; height: 8px; border-radius: 50%; background: var(--emerald); box-shadow: 0 0 8px var(--emerald); }
+
+.filters { 
+  display: flex; flex-wrap: wrap; gap: 16px; align-items: center; 
+  background: var(--bg-card); padding: 12px 16px; border-radius: var(--radius-md); border: var(--glass-border);
+}
+.filter-item { display: flex; align-items: center; gap: 10px; }
+.filter-item label { color: var(--text-muted); font-weight: 600; font-size: 13px; }
+
+select, input[type=number], input[type=datetime-local] { 
+  font-family: inherit; font-size: 13px; color: var(--text-main); 
+  background: var(--bg-input); border: 1px solid var(--border-subtle); 
+  border-radius: var(--radius-sm); padding: 8px 12px; outline: none;
+}
+select:focus, input:focus { border-color: var(--cyan); }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.tile { background: var(--bg-card); border: var(--glass-border); border-radius: var(--radius-lg); padding: 18px 20px; }
+.tile .l { color: var(--text-muted); font-size: 12px; font-weight: 600; text-transform: uppercase; }
+.tile .v { font-size: 28px; font-weight: 800; margin-top: 8px; font-family: var(--font-mono); color: #fff; }
+
+.grid2 { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 20px; }
+.card { 
+  background: var(--bg-card); border: var(--glass-border); border-radius: var(--radius-lg); 
+  padding: 20px; backdrop-filter: blur(12px); box-shadow: var(--glass-shadow);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.card h2 { font-size: 16px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
+
+.tablewrap { overflow-x: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); max-height: 400px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { position: sticky; top: 0; text-align: left; padding: 10px 14px; background: rgba(30, 41, 59, 0.95); color: var(--text-muted); border-bottom: 1px solid var(--border-subtle); z-index: 10; }
+td { padding: 10px 14px; border-bottom: 1px solid var(--border-subtle); }
+.num { text-align: right; font-family: var(--font-mono); }
+
+.btn { 
+  font-family: inherit; font-size: 13px; font-weight: 600; color: #fff;
+  background: linear-gradient(135deg, #0284c7, #2563eb); border: 0;
+  border-radius: var(--radius-sm); padding: 10px 18px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn:hover { opacity: 0.9; }
+
+.formgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+label.f { display: flex; flex-direction: column; gap: 6px; color: var(--text-muted); font-size: 12px; font-weight: 600; }
+
+@media (max-width: 1024px) { .grid2 { grid-template-columns: 1fr; } }
+</style>
 </head>
 <body>
 
-    <h1>Eco-Tower Monitoring Dashboard</h1>
-    <p class="sub">Loading data from database...</p>
-
-    <!-- Form to add new readings -->
-    <div class="card">
-        <h3>Add New Reading</h3>
-        <form id="addForm">
-            <input type="text" id="addTower" placeholder="Tower ID (e.g., T-01)" required>
-            <input type="text" id="addTime" placeholder="Time IST (e.g., 10:00 AM)" required>
-            <input type="number" step="any" id="addRf" placeholder="RF dBm" required>
-            <input type="number" id="addBird" placeholder="Bird Activity Index" required>
-            <button type="submit">Save to Database</button>
-        </form>
-        <div id="addMsg" class="msg"></div>
-        <button id="resetData" style="margin-top: 10px; background: #e74c3c;">Refresh Data</button>
+<div class="wrap">
+  <!-- Top Header -->
+  <header class="top">
+    <div class="brand-title-wrap">
+      <div class="brand-icon"><i data-lucide="radio-tower"></i></div>
+      <div>
+        <h1>RF-Sense Eco-Node Dashboard</h1>
+        <p class="sub">Live telemetry synchronized with Supabase</p>
+      </div>
     </div>
+    <div class="status-badge">
+      <span class="dot-online"></span> Supabase Connected
+    </div>
+  </header>
 
-    <!-- Data Display Table -->
-    <div class="card">
-        <h3>Recorded Data</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Tower ID</th>
-                    <th>Time (IST)</th>
-                    <th>RF (dBm)</th>
-                    <th>Bird Activity Index</th>
-                </tr>
-            </thead>
-            <tbody id="dataTableBody">
-                <tr><td colspan="5">Loading records...</td></tr>
-            </tbody>
+  <!-- Filter Bar -->
+  <div class="filters">
+    <div class="filter-item">
+      <i data-lucide="map-pin" style="color: var(--cyan); width: 16px;"></i>
+      <label for="towerSel">Select Node</label>
+      <select id="towerSel"><option value="ALL">All Nodes</option></select>
+    </div>
+    <button class="btn" id="refreshBtn" style="margin-left: auto;">
+      <i data-lucide="refresh-cw" style="width: 14px;"></i> Refresh Data
+    </button>
+  </div>
+
+  <!-- KPI Tiles -->
+  <section class="tiles">
+    <div class="tile">
+      <div class="l">Total Readings</div>
+      <div class="v" id="t-count">-</div>
+    </div>
+    <div class="tile">
+      <div class="l">Avg Bird Index</div>
+      <div class="v" id="t-bird" style="color: var(--orange);">-</div>
+    </div>
+    <div class="tile">
+      <div class="l">Avg RF Level</div>
+      <div class="v" id="t-rf" style="color: var(--cyan);">-</div>
+    </div>
+    <div class="tile">
+      <div class="l">Avg Stored Energy</div>
+      <div class="v" id="t-energy" style="color: var(--emerald);">-</div>
+    </div>
+  </section>
+
+  <!-- Data Display & User Injection Form -->
+  <div class="grid2">
+    <!-- Submit Data Form -->
+    <section class="card">
+      <h2><i data-lucide="plus-circle" style="color: var(--cyan);"></i> Submit New Reading</h2>
+      <p class="sub">Write a reading directly into the Supabase <code>readings</code> table.</p>
+      
+      <form id="addForm">
+        <div class="formgrid">
+          <label class="f">
+            Target Tower
+            <select id="addTower" required></select>
+          </label>
+          <label class="f">
+            Timestamp (IST)
+            <input id="addTime" type="datetime-local" min="2026-10-07T00:00" max="2026-10-21T00:00" required>
+          </label>
+          <label class="f">
+            RF Power (dBm)
+            <input id="addRf" type="number" min="-40" max="0" step="0.1" value="-12.5" required>
+          </label>
+          <label class="f">
+            Bird Index (0-100)
+            <input id="addBird" type="number" min="0" max="100" step="1" value="45" required>
+          </label>
+          <label class="f">
+            Capacitor Energy (mJ)
+            <input id="addEnergy" type="number" min="0" max="30" step="0.1" value="15.0" required>
+          </label>
+        </div>
+        <div style="margin-top: 16px;">
+          <button class="btn" type="submit">
+            <i data-lucide="send" style="width:14px;"></i> Push to Supabase
+          </button>
+        </div>
+      </form>
+      <div id="formMsg" style="margin-top: 8px; font-weight: 600;"></div>
+    </section>
+
+    <!-- Readings Table -->
+    <section class="card">
+      <h2><i data-lucide="database" style="color: var(--cyan);"></i> Live Database Telemetry</h2>
+      <div class="tablewrap">
+        <table id="readingsTable">
+          <thead>
+            <tr>
+              <th>Tower</th>
+              <th>District</th>
+              <th>Timestamp</th>
+              <th class="num">RF (dBm)</th>
+              <th class="num">Bird Index</th>
+              <th class="num">Energy (mJ)</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Loading live data...</td></tr>
+          </tbody>
         </table>
-    </div>
+      </div>
+    </section>
+  </div>
+</div>
 
-    <script>
-    (function () {
-        // Initialize Supabase Client with your credentials
-        const SUPABASE_URL = 'https://yppxiwatsykiwomgahvw.supabase.co';
-        const SUPABASE_ANON_KEY = 'sb_publishable_r2_cbPbW3z8qzSvG3PCrpQ_7M8BqJXW';
-        
-        const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+<script>
+// ==========================================================================
+// SUPABASE CONFIGURATION (Injected with your project details)
+// ==========================================================================
+const SUPABASE_URL = 'https://yppxiwatsykiwomgahvw.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_r2_cbPbW3z8qzSvG3PCrpQ_7M8BqJXW';
 
-        async function loadDashboardData() {
-            try {
-                // Fetch data from 'readings' table ordered by newest first
-                const { data, error } = await db.from('readings').select('*').order('id', { ascending: false });
-                
-                if (error) throw error;
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-                initDashboard(data);
-                document.querySelector('.sub').textContent = 'Connected successfully to Supabase cloud database.';
-            } catch (err) {
-                console.error('Database connection error:', err);
-                document.querySelector('.sub').textContent = 'Error connecting to database: ' + err.message;
-            }
+// State Memory
+let cachedTowers = [];
+let cachedReadings = [];
+
+// Initialize Icons & Dashboard
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.lucide) lucide.createIcons();
+  
+  // Set default datetime picker to right now
+  const now = new Date().toISOString().slice(0, 16);
+  document.getElementById('addTime').value = now;
+
+  // Initial Fetch
+  loadAllData();
+
+  // Attach Event Handlers
+  document.getElementById('refreshBtn').addEventListener('click', loadAllData);
+  document.getElementById('towerSel').addEventListener('change', renderDashboard);
+  document.getElementById('addForm').addEventListener('submit', handleFormSubmit);
+});
+
+// Fetch towers and readings from Supabase
+async function loadAllData() {
+  const msgEl = document.getElementById('formMsg');
+  msgEl.textContent = '';
+
+  try {
+    // 1. Fetch Towers
+    const { data: towers, error: towerErr } = await supabase
+      .from('towers')
+      .select('*')
+      .order('tower_id');
+
+    if (towerErr) throw towerErr;
+    cachedTowers = towers || [];
+
+    // Populate Tower Dropdowns
+    populateTowerDropdowns();
+
+    // 2. Fetch Readings
+    const { data: readings, error: readErr } = await supabase
+      .from('readings')
+      .select('*')
+      .order('read_at', { ascending: false })
+      .limit(100);
+
+    if (readErr) throw readErr;
+    cachedReadings = readings || [];
+
+    renderDashboard();
+  } catch (err) {
+    console.error('Error fetching data from Supabase:', err);
+    alert('Failed to connect to Supabase database. Please check your network or table setup.');
+  }
+}
+
+function populateTowerDropdowns() {
+  const selFilter = document.getElementById('towerSel');
+  const selAdd = document.getElementById('addTower');
+
+  const currentFilterVal = selFilter.value;
+  selFilter.innerHTML = '<option value="ALL">All Nodes</option>';
+  selAdd.innerHTML = '';
+
+  cachedTowers.forEach(t => {
+    const opt = `<option value="${t.tower_id}">${t.tower_id} (${t.district})</option>`;
+    selFilter.insertAdjacentHTML('beforeend', opt);
+    selAdd.insertAdjacentHTML('beforeend', opt);
+  });
+
+  selFilter.value = currentFilterVal || 'ALL';
+}
+
+function renderDashboard() {
+  const selectedTower = document.getElementById('towerSel').value;
+
+  // Filter Readings
+  const filteredReadings = selectedTower === 'ALL' 
+    ? cachedReadings 
+    : cachedReadings.filter(r => r.tower_id === selectedTower);
+
+  // Update KPI Tiles
+  document.getElementById('t-count').textContent = filteredReadings.length;
+
+  if (filteredReadings.length > 0) {
+    const avgBird = filteredReadings.reduce((sum, r) => sum + Number(r.bird_activity_index), 0) / filteredReadings.length;
+    const avgRf = filteredReadings.reduce((sum, r) => sum + Number(r.rf_dbm), 0) / filteredReadings.length;
+    const avgEnergy = filteredReadings.reduce((sum, r) => sum + Number(r.stored_energy_mj || 0), 0) / filteredReadings.length;
+
+    document.getElementById('t-bird').textContent = avgBird.toFixed(1);
+    document.getElementById('t-rf').textContent = avgRf.toFixed(1) + ' dBm';
+    document.getElementById('t-energy').textContent = avgEnergy.toFixed(1) + ' mJ';
+  } else {
+    document.getElementById('t-bird').textContent = '-';
+    document.getElementById('t-rf').textContent = '-';
+    document.getElementById('t-energy').textContent = '-';
+  }
+
+  // Render Table
+  const tbody = document.querySelector('#readingsTable tbody');
+  tbody.innerHTML = '';
+
+  if (filteredReadings.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No readings found for selected node.</td></tr>';
+    return;
+  }
+
+  const towerMap = new Map(cachedTowers.map(t => [t.tower_id, t.district]));
+
+  filteredReadings.forEach(r => {
+    const district = towerMap.get(r.tower_id) || 'Unknown';
+    const dateStr = new Date(r.read_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+
+    const tr = `
+      <tr>
+        <td><strong>${r.tower_id}</strong></td>
+        <td>${district}</td>
+        <td>${dateStr}</td>
+        <td class="num">${r.rf_dbm}</td>
+        <td class="num">${r.bird_activity_index}</td>
+        <td class="num">${r.stored_energy_mj || '-'}</td>
+        <td><span style="color: ${r.source === 'visitor' ? 'var(--cyan)' : 'var(--text-muted)'}">${r.source}</span></td>
+      </tr>
+    `;
+    tbody.insertAdjacentHTML('beforeend', tr);
+  });
+}
+
+// Handle Form Submission into Supabase
+async function handleFormSubmit(e) {
+  e.preventDefault();
+  const msgEl = document.getElementById('formMsg');
+  msgEl.style.color = 'var(--cyan)';
+  msgEl.textContent = 'Submitting reading to Supabase...';
+
+  const tower_id = document.getElementById('addTower').value;
+  const read_at = new Date(document.getElementById('addTime').value).toISOString();
+  const rf_dbm = parseFloat(document.getElementById('addRf').value);
+  const bird_activity_index = parseInt(document.getElementById('addBird').value, 10);
+  const stored_energy_mj = parseFloat(document.getElementById('addEnergy').value);
+
+  try {
+    const { data, error } = await supabase
+      .from('readings')
+      .insert([
+        {
+          tower_id: tower_id,
+          read_at: read_at,
+          rf_dbm: rf_dbm,
+          bird_activity_index: bird_activity_index,
+          stored_energy_mj: stored_energy_mj,
+          source: 'visitor' // Matches your database RLS check rule!
         }
+      ]);
 
-        loadDashboardData();
+    if (error) throw error;
 
-        function initDashboard(readings) {
-            const tbody = document.getElementById('dataTableBody');
-            tbody.innerHTML = ''; // Clear existing rows
+    msgEl.style.color = 'var(--emerald)';
+    msgEl.textContent = 'Successfully inserted reading into database!';
 
-            if (!readings || readings.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5">No records found in database yet. Add one above!</td></tr>';
-                return;
-            }
-
-            readings.forEach(row => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${row.id}</td>
-                    <td>${row.tower_id}</td>
-                    <td>${row.time_ist}</td>
-                    <td>${row.rf_dbm}</td>
-                    <td>${row.bird_activity_index}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        document.getElementById('addForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const payload = {
-                tower_id: document.getElementById('addTower').value,
-                time_ist: document.getElementById('addTime').value,
-                rf_dbm: parseFloat(document.getElementById('addRf').value),
-                bird_activity_index: parseInt(document.getElementById('addBird').value)
-            };
-
-            try {
-                // Insert record into Supabase
-                const { error } = await db.from('readings').insert([payload]);
-                
-                if (error) throw error;
-
-                document.getElementById('addMsg').textContent = 'Reading successfully saved to database!';
-                document.getElementById('addMsg').className = 'msg ok';
-                document.getElementById('addForm').reset();
-                loadDashboardData(); 
-            } catch (ex) {
-                document.getElementById('addMsg').textContent = 'Error saving reading: ' + ex.message;
-                document.getElementById('addMsg').className = 'msg err';
-            }
-        });
-
-        document.getElementById('resetData').addEventListener('click', loadDashboardData);
-    })();
-    </script>
+    // Reload data immediately
+    await loadAllData();
+  } catch (err) {
+    console.error('Insert error:', err);
+    msgEl.style.color = 'var(--rose)';
+    msgEl.textContent = 'Error inserting record: ' + (err.message || 'Check database constraints/RLS');
+  }
+}
+</script>
 </body>
 </html>
