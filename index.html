@@ -244,12 +244,13 @@ label.f { display: flex; flex-direction: column; gap: 6px; color: var(--text-mut
 
 <script>
 // ==========================================================================
-// SUPABASE CONFIGURATION (Injected with your project details)
+// SUPABASE CONFIGURATION (Using your provided keys)
 // ==========================================================================
 const SUPABASE_URL = 'https://yppxiwatsykiwomgahvw.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_r2_cbPbW3z8qzSvG3PCrpQ_7M8BqJXW';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Initialized cleanly avoiding variable name collision
+let sbClient = null;
 
 // State Memory
 let cachedTowers = [];
@@ -259,6 +260,13 @@ let cachedReadings = [];
 document.addEventListener('DOMContentLoaded', () => {
   if (window.lucide) lucide.createIcons();
   
+  // Initialize Supabase client safely
+  if (window.supabase) {
+    sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  } else {
+    console.error('Supabase library failed to load.');
+  }
+
   // Set default datetime picker to right now
   const now = new Date().toISOString().slice(0, 16);
   document.getElementById('addTime').value = now;
@@ -274,12 +282,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Fetch towers and readings from Supabase
 async function loadAllData() {
+  if (!sbClient) return;
   const msgEl = document.getElementById('formMsg');
   msgEl.textContent = '';
 
   try {
     // 1. Fetch Towers
-    const { data: towers, error: towerErr } = await supabase
+    const { data: towers, error: towerErr } = await sbClient
       .from('towers')
       .select('*')
       .order('tower_id');
@@ -291,7 +300,7 @@ async function loadAllData() {
     populateTowerDropdowns();
 
     // 2. Fetch Readings
-    const { data: readings, error: readErr } = await supabase
+    const { data: readings, error: readErr } = await sbClient
       .from('readings')
       .select('*')
       .order('read_at', { ascending: false })
@@ -303,7 +312,6 @@ async function loadAllData() {
     renderDashboard();
   } catch (err) {
     console.error('Error fetching data from Supabase:', err);
-    alert('Failed to connect to Supabase database. Please check your network or table setup.');
   }
 }
 
@@ -382,6 +390,7 @@ function renderDashboard() {
 // Handle Form Submission into Supabase
 async function handleFormSubmit(e) {
   e.preventDefault();
+  if (!sbClient) return;
   const msgEl = document.getElementById('formMsg');
   msgEl.style.color = 'var(--cyan)';
   msgEl.textContent = 'Submitting reading to Supabase...';
@@ -393,7 +402,7 @@ async function handleFormSubmit(e) {
   const stored_energy_mj = parseFloat(document.getElementById('addEnergy').value);
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await sbClient
       .from('readings')
       .insert([
         {
@@ -402,7 +411,7 @@ async function handleFormSubmit(e) {
           rf_dbm: rf_dbm,
           bird_activity_index: bird_activity_index,
           stored_energy_mj: stored_energy_mj,
-          source: 'visitor' // Matches your database RLS check rule!
+          source: 'visitor'
         }
       ]);
 
