@@ -1,6 +1,6 @@
 # RF-Sense Eco-Node
 
-Seva Innovation Challenge 2026 (Maharashtra zone) · Team: Nyasha Gupta (lead) and Sonali Nirala · Bhilai Institute of Technology, Durg
+Seva Innovation Challenge 2026 · Team: Nyasha Gupta (lead) and Sonali Nirala · Bhilai Institute of Technology, Durg
 
 A pole-mounted module that harvests stray RF energy from mobile-tower signals to power a bird-sound activity sensor, an RF level logger and a LoRa radio, with no battery and no wiring. This repository holds the **software demo**: a dashboard that compares bird activity with RF level around towers.
 
@@ -8,7 +8,7 @@ A pole-mounted module that harvests stray RF energy from mobile-tower signals to
 
 ## About the demo data
 
-All readings are **simulated** (36 towers: 20 in Maharashtra, 8 in Madhya Pradesh and 8 in Chhattisgarh, 7 to 20 October 2026, one reading about every 15 minutes when a node has enough stored energy). The simulation has no RF effect on birds built in, so a correlation near zero is expected. The data only shows how the dashboard and database work. It is not a finding about birds or radiation.
+All readings are **simulated** (16 towers: 8 in Chhattisgarh and 8 in Madhya Pradesh, 7 to 20 October 2026, one reading about every 15 minutes when a node has enough stored energy). The simulation has no RF effect on birds built in, so a correlation near zero is expected. The data only shows how the dashboard and database work. It is not a finding about birds or radiation.
 
 ## What the dashboard does
 
