@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Eco-Tower Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f4f7f6; color: #333; }
+        h1 { color: #2c3e50; }
+        .sub { color: #7f8c8d; margin-bottom: 20px; }
+        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        form input { padding: 8px; margin-right: 10px; margin-bottom: 10px; }
+        button { padding: 8px 15px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #2980b9; }
+        .msg { font-weight: bold; margin-top: 10px; }
+        .msg.ok { color: green; }
+        .msg.err { color: red; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+
+    <h1>Eco-Tower Monitoring Dashboard</h1>
+    <p class="sub">Loading data from database...</p>
+
+    <!-- Form to add new readings -->
+    <div class="card">
+        <h3>Add New Reading</h3>
+        <form id="addForm">
+            <input type="text" id="addTower" placeholder="Tower ID (e.g., T-01)" required>
+            <input type="text" id="addTime" placeholder="Time IST (e.g., 10:00 AM)" required>
+            <input type="number" step="any" id="addRf" placeholder="RF dBm" required>
+            <input type="number" id="addBird" placeholder="Bird Activity Index" required>
+            <button type="submit">Save to Database</button>
+        </form>
+        <div id="addMsg" class="msg"></div>
+        <button id="resetData" style="margin-top: 10px; background: #e74c3c;">Refresh Data</button>
+    </div>
+
+    <!-- Data Display Table -->
+    <div class="card">
+        <h3>Recorded Data</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tower ID</th>
+                    <th>Time (IST)</th>
+                    <th>RF (dBm)</th>
+                    <th>Bird Activity Index</th>
+                </tr>
+            </thead>
+            <tbody id="dataTableBody">
+                <tr><td colspan="5">Loading records...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+    (function () {
+        let D = null;
+
+        async function loadDashboardData() {
+            try {
+                const response = await fetch('/api/data');
+                if (!response.ok) throw new Error('Failed to fetch data from database');
+                D = await response.json();
+                initDashboard();
+                document.querySelector('.sub').textContent = 'Connected successfully to backend database.';
+            } catch (err) {
+                console.error('Database connection error:', err);
+                document.querySelector('.sub').textContent = 'Error connecting to database. Ensure server.js is running.';
+            }
+        }
+
+        loadDashboardData();
+
+        function initDashboard() {
+            if (!D || !D.readings) return;
+            
+            const tbody = document.getElementById('dataTableBody');
+            tbody.innerHTML = ''; // Clear existing rows
+
+            if (D.readings.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5">No records found in database yet. Add one above!</td></tr>';
+                return;
+            }
+
+            D.readings.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.id}</td>
+                    <td>${row.tower_id}</td>
+                    <td>${row.time_ist}</td>
+                    <td>${row.rf_dbm}</td>
+                    <td>${row.bird_activity_index}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        document.getElementById('addForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const payload = {
+                tower_id: document.getElementById('addTower').value,
+                time_ist: document.getElementById('addTime').value,
+                rf_dbm: parseFloat(document.getElementById('addRf').value),
+                bird_activity_index: parseInt(document.getElementById('addBird').value)
+            };
+
+            try {
+                const res = await fetch('/api/readings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (res.ok) {
+                    document.getElementById('addMsg').textContent = 'Reading successfully saved to database!';
+                    document.getElementById('addMsg').className = 'msg ok';
+                    document.getElementById('addForm').reset();
+                    loadDashboardData(); 
+                } else {
+                    throw new Error('Server rejected submission');
+                }
+            } catch (ex) {
+                document.getElementById('addMsg').textContent = 'Error saving reading: ' + ex.message;
+                document.getElementById('addMsg').className = 'msg err';
+            }
+        });
+
+        document.getElementById('resetData').addEventListener('click', loadDashboardData);
+    })();
+    </script>
+</body>
+</html>
